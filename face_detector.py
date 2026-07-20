@@ -31,13 +31,16 @@ MODELS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "models")
 PROTOTXT_PATH = os.path.join(MODELS_DIR, "deploy.prototxt")
 CAFFEMODEL_PATH = os.path.join(MODELS_DIR, "res10_300x300_ssd_iter_140000.caffemodel")
 
-# Official OpenCV repo — same files used inside opencv/samples/dnn/face_detector
+# Official OpenCV repo — same files used inside opencv/samples/dnn/face_detector.
+# Note: the .prototxt lives in the main repo, but the .caffemodel is a large
+# binary that OpenCV stores in a separate repo instead (GitHub restricts big
+# binaries in regular repos), on a dedicated branch.
 PROTOTXT_URL = (
     "https://raw.githubusercontent.com/opencv/opencv/master/samples/dnn/face_detector/deploy.prototxt"
 )
 CAFFEMODEL_URL = (
-    "https://raw.githubusercontent.com/opencv/opencv/master/samples/dnn/face_detector/"
-    "res10_300x300_ssd_iter_140000.caffemodel"
+    "https://raw.githubusercontent.com/opencv/opencv_3rdparty/"
+    "dnn_samples_face_detector_20170830/res10_300x300_ssd_iter_140000.caffemodel"
 )
 
 DNN_CONFIDENCE_THRESHOLD = 0.6

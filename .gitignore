@@ -1,0 +1,15 @@
+# Python
+__pycache__/
+*.pyc
+venv/
+env/
+.venv/
+
+# Downloaded at runtime — don't commit ~10 MB of model weights
+models/*.prototxt
+models/*.caffemodel
+
+# Editor/OS cruft
+.vscode/
+.idea/
+.DS_Store

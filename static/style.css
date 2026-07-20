@@ -1,0 +1,283 @@
+:root {
+  --paper: #E6E2D2;
+  --paper-card: #F3F0E5;
+  --rule: #C9C2A8;
+  --ink: #22291E;
+  --ink-soft: #565A4C;
+  --gold: #C98F1F;
+  --gold-soft: #E4C878;
+  --brick: #A5432E;
+  --focus: #2E6F6B;
+
+  --font-display: "Fraunces", Georgia, serif;
+  --font-body: "Inter", -apple-system, sans-serif;
+  --font-mono: "IBM Plex Mono", monospace;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--paper);
+  background-image:
+    linear-gradient(var(--rule) 1px, transparent 1px);
+  background-size: 100% 2.4rem;
+  color: var(--ink);
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+}
+
+.page {
+  max-width: 880px;
+  margin: 0 auto;
+  padding: 3rem 1.5rem 4rem;
+}
+
+/* ---------- Header ---------- */
+.masthead {
+  text-align: center;
+  margin-bottom: 2.2rem;
+}
+.eyebrow {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--gold);
+  margin: 0 0 0.6rem;
+  font-weight: 600;
+}
+.masthead h1 {
+  font-family: var(--font-display);
+  font-optical-sizing: auto;
+  font-weight: 600;
+  font-size: clamp(2.1rem, 5vw, 3rem);
+  margin: 0 0 0.5rem;
+  letter-spacing: -0.01em;
+}
+.masthead .sub {
+  color: var(--ink-soft);
+  font-size: 1.02rem;
+  margin: 0;
+}
+
+/* ---------- Register card ---------- */
+.register-card {
+  background: var(--paper-card);
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+  box-shadow: 0 1px 0 rgba(34, 41, 30, 0.04), 0 18px 34px -22px rgba(34, 41, 30, 0.35);
+  padding: 2.2rem;
+  position: relative;
+}
+.register-card::before {
+  /* left margin rule, like a ledger page */
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 3.4rem;
+  width: 1px;
+  background: rgba(165, 67, 46, 0.18);
+  display: none;
+}
+@media (min-width: 640px) {
+  .register-card::before { display: block; }
+}
+
+/* ---------- Upload row ---------- */
+.upload-row {
+  display: grid;
+  grid-template-columns: 1.3fr 1fr;
+  gap: 2rem;
+}
+@media (max-width: 640px) {
+  .upload-row { grid-template-columns: 1fr; }
+}
+
+.dropzone {
+  display: block;
+  cursor: pointer;
+  border: 1.5px dashed var(--rule);
+  border-radius: 4px;
+  background:
+    repeating-linear-gradient(135deg, rgba(34,41,30,0.02) 0 2px, transparent 2px 10px);
+  min-height: 260px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 1.5rem;
+  position: relative;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+.dropzone:hover,
+.dropzone.dragover {
+  border-color: var(--gold);
+  background-color: rgba(201, 143, 31, 0.06);
+}
+.dropzone:focus-within {
+  outline: 2px solid var(--focus);
+  outline-offset: 3px;
+}
+.dropzone-inner .pin {
+  color: var(--gold);
+  margin-bottom: 0.6rem;
+}
+.dz-title {
+  font-family: var(--font-display);
+  font-size: 1.15rem;
+  font-weight: 500;
+  margin: 0 0 0.3rem;
+}
+.dz-hint {
+  color: var(--ink-soft);
+  font-size: 0.88rem;
+  margin: 0;
+}
+.preview-img {
+  max-width: 100%;
+  max-height: 260px;
+  border-radius: 3px;
+  box-shadow: 0 6px 18px -8px rgba(34,41,30,0.4);
+}
+
+/* ---------- Side panel ---------- */
+.side-panel {
+  display: flex;
+  flex-direction: column;
+}
+.panel-label {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  margin: 0 0 0.7rem;
+}
+.panel-list {
+  margin: 0 0 1.4rem;
+  padding-left: 1.1rem;
+  color: var(--ink-soft);
+  font-size: 0.88rem;
+  line-height: 1.55;
+}
+.panel-list li { margin-bottom: 0.5rem; }
+.panel-list strong { color: var(--ink); }
+
+.submit-btn {
+  margin-top: auto;
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 0.95rem;
+  background: var(--ink);
+  color: var(--paper-card);
+  border: none;
+  border-radius: 4px;
+  padding: 0.85rem 1.4rem;
+  cursor: pointer;
+  transition: background-color 0.15s ease, transform 0.1s ease;
+}
+.submit-btn:hover:not(:disabled) { background: #3a4432; }
+.submit-btn:active:not(:disabled) { transform: translateY(1px); }
+.submit-btn:disabled {
+  background: var(--rule);
+  color: var(--ink-soft);
+  cursor: not-allowed;
+}
+.submit-btn.loading {
+  background: var(--gold);
+  color: var(--ink);
+}
+
+.error-msg {
+  color: var(--brick);
+  font-size: 0.85rem;
+  margin-top: 0.8rem;
+}
+
+/* ---------- Result row ---------- */
+.result-row {
+  display: grid;
+  grid-template-columns: 1.3fr 1fr;
+  gap: 2rem;
+  margin-top: 2.4rem;
+  padding-top: 2.2rem;
+  border-top: 1px dashed var(--rule);
+}
+@media (max-width: 640px) {
+  .result-row { grid-template-columns: 1fr; }
+}
+.result-photo-wrap img {
+  width: 100%;
+  border-radius: 3px;
+  box-shadow: 0 6px 18px -8px rgba(34,41,30,0.4);
+}
+
+.tally-wrap {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Odometer-style tally counter — the signature element */
+.odometer {
+  display: flex;
+  gap: 0.2rem;
+  font-family: var(--font-mono);
+  font-weight: 600;
+  font-size: 3.2rem;
+  color: var(--ink);
+  line-height: 1;
+  margin-bottom: 0.5rem;
+}
+.odometer .digit {
+  display: inline-block;
+  background: var(--ink);
+  color: var(--paper-card);
+  border-radius: 3px;
+  padding: 0.1em 0.18em;
+  min-width: 0.9em;
+  text-align: center;
+  transform: translateY(-10px);
+  opacity: 0;
+  animation: dropIn 0.42s cubic-bezier(.2,.9,.3,1.2) forwards;
+}
+@keyframes dropIn {
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.tally-caption {
+  color: var(--ink-soft);
+  font-size: 0.92rem;
+  margin: 0 0 1.4rem;
+}
+
+.link-btn {
+  align-self: flex-start;
+  margin-top: auto;
+  background: none;
+  border: none;
+  color: var(--focus);
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  padding: 0;
+}
+.link-btn:hover { text-decoration: underline; }
+
+/* ---------- Footer ---------- */
+.foot-note {
+  max-width: 640px;
+  margin: 1.6rem auto 0;
+  text-align: center;
+}
+.foot-note p {
+  font-size: 0.8rem;
+  color: var(--ink-soft);
+  line-height: 1.6;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .odometer .digit { animation: none; opacity: 1; transform: none; }
+}

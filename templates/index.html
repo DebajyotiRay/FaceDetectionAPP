@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Roll Call — Photo Attendance Counter</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+<div class="page">
+
+  <header class="masthead">
+    <p class="eyebrow">Photo Roll Call</p>
+    <h1>Attendance Register</h1>
+    <p class="sub">Upload one class photo. Skip the roll call.</p>
+  </header>
+
+  <main class="register-card">
+
+    <section class="upload-row" id="uploadRow">
+      <label class="dropzone" id="dropzone" for="fileInput">
+        <div class="dropzone-inner" id="dropzoneInner">
+          <svg class="pin" width="34" height="34" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 2C8.5 2 6 4.5 6 8c0 4.5 6 12 6 12s6-7.5 6-12c0-3.5-2.5-6-6-6z" stroke="currentColor" stroke-width="1.4"/>
+            <circle cx="12" cy="8" r="2.2" stroke="currentColor" stroke-width="1.4"/>
+          </svg>
+          <p class="dz-title">Paste in today's class photo</p>
+          <p class="dz-hint">Click to browse, or drag a photo here — JPG or PNG</p>
+        </div>
+        <img id="preview" class="preview-img" alt="" hidden>
+        <input type="file" id="fileInput" accept="image/png, image/jpeg, image/bmp, image/webp" hidden>
+      </label>
+
+      <div class="side-panel">
+        <p class="panel-label">Ledger notes</p>
+        <ul class="panel-list">
+          <li>One photo, taken from the front of the room, works best.</li>
+          <li>Detector engine on this server: <strong>{{ 'DNN (high accuracy)' if backend == 'dnn' else 'Haar Cascade (offline mode)' }}</strong></li>
+          <li>Nothing is stored — the photo stays in this browser session only.</li>
+        </ul>
+        <button id="submitBtn" class="submit-btn" disabled>Take Attendance</button>
+        <p class="error-msg" id="errorMsg" hidden></p>
+      </div>
+    </section>
+
+    <section class="result-row" id="resultRow" hidden>
+      <div class="result-photo-wrap">
+        <img id="resultImage" alt="Detected faces">
+      </div>
+
+      <div class="tally-wrap">
+        <p class="panel-label">Present</p>
+        <div class="odometer" id="odometer" aria-live="polite"></div>
+        <p class="tally-caption" id="tallyCaption"></p>
+        <button id="resetBtn" class="link-btn">Count another photo →</button>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="foot-note">
+    <p>Built for classroom headcounts — heavy shadows, tilted faces, and back-row students may be missed. Always spot-check the marked photo before trusting the number.</p>
+  </footer>
+
+</div>
+
+<script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>

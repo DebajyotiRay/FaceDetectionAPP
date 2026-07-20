@@ -1,38 +1,28 @@
 # Attendance Register — Photo Roll Call
 
-Upload one photo of a classroom. Get an instant headcount, with every
-detected face marked, in under a second. No manual roll call.
+Take one photo of the classroom, upload it, and get a headcount back in
+under a second — with every face marked so you can double check it.
 
-This is a from-scratch rebuild of a BTech-era C++ / OpenCV face-detection
-exercise (`FaceDetection.cpp`, 2021), turned into an actual usable web tool
-for an M.Tech portfolio.
-
-## What changed from the original project
-
-| | BTech version (2021) | This version |
-|---|---|---|
-| Interface | Console app, hardcoded local file paths | Browser upload, drag-and-drop |
-| Detector | Haar cascade only | DNN (res10 SSD) with automatic fallback to Haar if offline |
-| Output | Saves an image file to disk | Live count + annotated photo in-browser |
-| Scope | Detects faces in exactly 2 hardcoded images | Any single photo, any class size, resized automatically |
-| Use case | Demo of `detectMultiScale` | Framed around a real problem: classroom attendance |
+Manual roll call in a lecture hall of 60+ students eats real time every
+single class. This is meant to replace that with a photo.
 
 ## How it works
 
-1. You upload a photo (e.g. taken from the front of the classroom).
-2. Flask receives the image, decodes it with OpenCV, and downsizes it if it's very large.
-3. `face_detector.py` runs it through OpenCV's DNN face detector (a small
-   Caffe-based SSD model) if the model files are available locally — this
-   backend is noticeably better than Haar cascades at side-angled faces,
-   uneven lighting, and smaller faces near the back of a room.
-4. If the DNN model files can't be downloaded (e.g. no internet, first run
-   offline), the app **automatically falls back** to a tuned Haar cascade —
-   the same detector family as the original project, bundled with OpenCV,
-   so the app still works with zero setup.
-5. Detected faces are boxed and numbered on the photo, and the count is
-   returned to the browser.
+You upload a photo, Flask picks it up and hands it to OpenCV, and OpenCV
+finds the faces. Under the hood there are actually two possible detectors:
 
-## Setup
+- By default it tries to use OpenCV's DNN face detector (a small SSD model),
+  which is noticeably better than older methods at catching angled faces,
+  bad lighting, and small faces near the back of the room.
+- If that model can't be downloaded for some reason — no internet, a
+  blocked network, whatever — it just falls back to a Haar cascade instead.
+  That one ships with OpenCV already, so the app never breaks, it just gets
+  a bit less accurate. The page tells you which one is currently active.
+
+Once faces are found, they get boxed and numbered on the photo, and the
+count gets sent back to the browser.
+
+## Running it
 
 ```bash
 cd attendance-counter
@@ -42,74 +32,53 @@ pip install -r requirements.txt
 python app.py
 ```
 
-Then open **http://localhost:5000** in your browser.
+Open http://localhost:5000 and you're in.
 
-On first run, the app tries to download the DNN face detector model
-(~10 MB, one-time, from OpenCV's own GitHub repo) into `models/`. If your
-network blocks the download, it silently falls back to the Haar cascade —
-no action needed either way. The active backend is shown on the page itself.
+First time you run it, it'll try to grab the DNN model (~10MB) from
+OpenCV's GitHub. If that fails it just quietly switches to the Haar
+cascade — nothing you need to do either way.
 
 ## Project structure
 
 ```
 attendance-counter/
-├── app.py              Flask routes: "/" (upload page) and "/detect" (API)
-├── face_detector.py    Detection engine — DNN backend with Haar fallback
+├── app.py              Flask routes — the upload page and the /detect API
+├── face_detector.py    Detection logic, DNN with a Haar fallback
 ├── requirements.txt
 ├── templates/
 │   └── index.html
 └── static/
-    ├── style.css        "Attendance register / ledger" visual theme
-    └── script.js        Upload, drag-and-drop, results rendering
+    ├── style.css        the "ledger" look
+    └── script.js        upload handling, drag-and-drop, results
 ```
 
-## Production-readiness notes
+## A few deliberate choices
 
-A few things were deliberately fixed to avoid rookie mistakes:
+Debug mode is off by default — Flask's debugger lets you run arbitrary
+code if it's left on and exposed, so it's opt-in only (`FLASK_DEBUG=1`).
+Same idea with the host: it binds to `127.0.0.1` unless you explicitly set
+`HOST=0.0.0.0`.
 
-- **Debug mode is off by default.** Flask's debugger allows arbitrary code
-  execution if left on and exposed — it's opt-in only, via `FLASK_DEBUG=1`.
-- **Binds to `127.0.0.1` by default**, not `0.0.0.0`. Set `HOST=0.0.0.0` if
-  you deliberately want other devices on the same network to reach it.
-- **No stack traces are ever sent to the browser.** Errors are logged
-  server-side and returned as clean JSON messages instead.
-- **Oversized uploads (>12 MB) get a friendly error**, not Werkzeug's
-  default HTML error page.
-- **Model downloads have a timeout** and clean up partial files on failure,
-  so a flaky network can't leave the app permanently stuck or hang startup.
-- **`.gitignore`** keeps `__pycache__/`, `venv/`, and the downloaded model
-  binaries out of version control.
+Errors don't leak stack traces to the browser — they get logged on the
+server and the user just sees a plain message. Uploads over 12MB get a
+proper error instead of Flask's default ugly page. And the model download
+has a timeout, so a bad network fails fast into the Haar fallback instead
+of hanging the app on startup.
 
-## Known limitations (worth mentioning if you demo or discuss this)
+## Where it struggles
 
-- **Not a recognition system** — it counts and boxes faces, it does not
-  identify who is present. That's a natural next step (see below).
-- Very oblique side profiles, heavy backlighting, or masks reduce accuracy,
-  as with any general-purpose face detector.
-- The Haar fallback is faster but produces more false positives/negatives
-  than the DNN backend — the app tells you which one is active so you can
-  judge how much to trust the count.
-- This is a development server (`app.run`), not a production deployment —
-  fine for a demo or local classroom use, not for hosting publicly as-is.
+It's a face detector, not a face recognizer — it'll tell you how many
+people are in the photo, not who they are. Extreme side angles, heavy
+backlighting, or anything covering half a face (masks, hands, hair) can
+throw it off, same as any general-purpose detector would struggle. The
+Haar fallback in particular is faster but noisier than the DNN model, which
+is why the app always shows you which one it's using — worth a glance
+before trusting the number blindly.
 
-## Ideas for extending this further
+This also runs on Flask's built-in dev server, which is fine for a demo or
+local use but isn't meant to be exposed publicly as-is.
 
-These are natural "v2" directions if you want to keep building on this for
-your M.Tech coursework or a resume project:
+## Built with
 
-- **Attendance matching**: pair detected faces against a class roster using
-  face embeddings (e.g. `face_recognition` / ArcFace) to mark named students
-  present/absent, not just a headcount.
-- **CSV/Excel export**: log each session's count and timestamp for record-keeping.
-- **Live webcam mode**: capture directly from a classroom camera instead of
-  uploading a file.
-- **Confidence/quality warnings**: flag photos that are too dark, blurry, or
-  taken at too sharp an angle before relying on the count.
-- **Accuracy benchmarking**: compare Haar vs. DNN precision/recall on a small
-  labeled set of classroom photos — good material for a short report or
-  even a mini research write-up.
-
-## Tech stack
-
-Python, Flask, OpenCV (DNN + Haar cascade), vanilla HTML/CSS/JS (no frontend
-framework needed for a single-page tool like this).
+Python, Flask, OpenCV, and plain HTML/CSS/JS — no frontend framework
+needed for something this size.

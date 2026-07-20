@@ -78,11 +78,6 @@ Haar fallback in particular is faster but noisier than the DNN model, which
 is why the app always shows you which one it's using — worth a glance
 before trusting the number blindly.
 
-This also ships with `gunicorn` as the production WSGI server — the live
-demo above runs on that, not Flask's built-in dev server (`python app.py`
-locally still uses the dev server, which is fine for local testing only).
-
 ## Built with
 
-Python, Flask, OpenCV, and plain HTML/CSS/JS — no frontend framework
-needed for something this size.
+Python, Flask, OpenCV, and plain HTML/CSS/JS 

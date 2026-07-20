@@ -23,7 +23,7 @@ app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = 12 * 1024 * 1024  # 12 MB upload cap
 
 detector = FaceDetector()
-print(f"[app] Face detector ready. Backend in use: {detector.backend.upper()}")
+print(f"[app] Starting on {detector.backend.upper()} backend (may upgrade to DNN in the background).")
 
 ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "bmp", "webp"}
 

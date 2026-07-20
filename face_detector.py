@@ -7,23 +7,25 @@ Two backends are supported:
   1. DNN  - OpenCV's res10 SSD Caffe face detector. Much more accurate,
             handles angled faces, varied lighting, partial occlusion, and
             small/far-away faces (all common in a classroom photo).
-  2. Haar - Classic Viola-Jones cascade (the same family of detector used
-            in the original 2021 BTech project). Zero download required,
-            since it ships inside the opencv-python package.
+  2. Haar - Classic Viola-Jones cascade. Zero download required, since it
+            ships inside the opencv-python package.
 
-On startup we try to fetch the DNN model files into ./models the first
-time the app runs (they're ~10 MB, one-time download from OpenCV's own
-GitHub repo). If that fails for any reason (no internet, blocked network,
-etc.) we transparently fall back to Haar so the app still works offline.
+The app starts up on Haar immediately — no network call blocks startup.
+In the background, a thread tries to download the DNN model files
+(~10 MB, one-time, from OpenCV's own GitHub repo) and, if that succeeds,
+swaps the active backend over to DNN for every request from then on. If
+the download fails or is slow, the app just keeps serving from Haar —
+nothing ever hangs or breaks.
 """
 
 import os
 import socket
+import threading
 import urllib.request
 import cv2
 import numpy as np
 
-DOWNLOAD_TIMEOUT_SECONDS = 6
+DOWNLOAD_TIMEOUT_SECONDS = 20
 
 MODELS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "models")
 PROTOTXT_PATH = os.path.join(MODELS_DIR, "deploy.prototxt")
@@ -48,29 +50,44 @@ MAX_DIMENSION = 1600  # downscale huge phone photos before processing
 
 class FaceDetector:
     def __init__(self):
+        self._lock = threading.Lock()
         self.backend = None
         self.net = None
         self.haar = None
-        self._load_backend()
+
+        # Haar loads instantly (no network) so the app is ready to serve
+        # requests right away, even before the DNN upgrade attempt finishes.
+        self._load_haar()
+
+        os.makedirs(MODELS_DIR, exist_ok=True)
+        threading.Thread(target=self._upgrade_to_dnn_in_background, daemon=True).start()
 
     # ------------------------------------------------------------------ #
     # Backend setup
     # ------------------------------------------------------------------ #
-    def _load_backend(self):
-        os.makedirs(MODELS_DIR, exist_ok=True)
-        if self._ensure_dnn_files():
-            try:
-                self.net = cv2.dnn.readNetFromCaffe(PROTOTXT_PATH, CAFFEMODEL_PATH)
-                self.backend = "dnn"
-                return
-            except Exception as e:
-                print(f"[face_detector] Failed to load DNN model, falling back to Haar: {e}")
-
+    def _load_haar(self):
         cascade_path = os.path.join(cv2.data.haarcascades, "haarcascade_frontalface_default.xml")
-        self.haar = cv2.CascadeClassifier(cascade_path)
-        if self.haar.empty():
+        haar = cv2.CascadeClassifier(cascade_path)
+        if haar.empty():
             raise RuntimeError("Could not load Haar cascade classifier — OpenCV install looks broken.")
-        self.backend = "haar"
+        with self._lock:
+            self.haar = haar
+            self.backend = "haar"
+
+    def _upgrade_to_dnn_in_background(self):
+        if not self._ensure_dnn_files():
+            print("[face_detector] DNN model unavailable — staying on Haar cascade.")
+            return
+        try:
+            net = cv2.dnn.readNetFromCaffe(PROTOTXT_PATH, CAFFEMODEL_PATH)
+        except Exception as e:
+            print(f"[face_detector] Downloaded DNN files but failed to load them, staying on Haar: {e}")
+            return
+
+        with self._lock:
+            self.net = net
+            self.backend = "dnn"
+        print("[face_detector] Upgraded to DNN backend.")
 
     def _ensure_dnn_files(self) -> bool:
         """Return True if both DNN model files are present locally (downloading if needed)."""
@@ -79,7 +96,7 @@ class FaceDetector:
             self._download_if_missing(CAFFEMODEL_URL, CAFFEMODEL_PATH)
             return os.path.exists(PROTOTXT_PATH) and os.path.exists(CAFFEMODEL_PATH)
         except Exception as e:
-            print(f"[face_detector] Could not download DNN model files ({e}). Using Haar cascade instead.")
+            print(f"[face_detector] Could not download DNN model files ({e}).")
             return False
 
     @staticmethod
@@ -106,16 +123,22 @@ class FaceDetector:
     def detect(self, image: np.ndarray):
         """
         Detect faces in a BGR OpenCV image.
-        Returns (list_of_boxes, backend_name) where each box is (x, y, w, h).
+        Returns (list_of_boxes, resized_image, backend_name).
         """
         image = self._resize_if_needed(image)
 
-        if self.backend == "dnn":
-            boxes = self._detect_dnn(image)
-        else:
-            boxes = self._detect_haar(image)
+        # Snapshot the active backend under the lock so a mid-request
+        # upgrade from Haar to DNN (happening on the background thread)
+        # can never leave us reading a half-swapped state.
+        with self._lock:
+            backend, net, haar = self.backend, self.net, self.haar
 
-        return boxes, image, self.backend
+        if backend == "dnn":
+            boxes = self._detect_dnn(image, net)
+        else:
+            boxes = self._detect_haar(image, haar)
+
+        return boxes, image, backend
 
     def _resize_if_needed(self, image: np.ndarray) -> np.ndarray:
         h, w = image.shape[:2]
@@ -125,11 +148,11 @@ class FaceDetector:
             image = cv2.resize(image, (int(w * scale), int(h * scale)))
         return image
 
-    def _detect_dnn(self, image: np.ndarray):
+    def _detect_dnn(self, image: np.ndarray, net):
         h, w = image.shape[:2]
         blob = cv2.dnn.blobFromImage(image, 1.0, (300, 300), (104.0, 177.0, 123.0))
-        self.net.setInput(blob)
-        detections = self.net.forward()
+        net.setInput(blob)
+        detections = net.forward()
 
         boxes = []
         for i in range(detections.shape[2]):
@@ -144,10 +167,10 @@ class FaceDetector:
                 boxes.append((int(x1), int(y1), int(x2 - x1), int(y2 - y1)))
         return boxes
 
-    def _detect_haar(self, image: np.ndarray):
+    def _detect_haar(self, image: np.ndarray, haar):
         gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
         gray = cv2.equalizeHist(gray)
-        faces = self.haar.detectMultiScale(
+        faces = haar.detectMultiScale(
             gray,
             scaleFactor=HAAR_SCALE_FACTOR,
             minNeighbors=HAAR_MIN_NEIGHBORS,
